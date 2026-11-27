@@ -1,59 +1,93 @@
+
 // =====================================================
-//  API — Vercel API Routes + Neon PostgreSQL
+// API — Vercel API Routes + Neon PostgreSQL
+// Autenticación mediante sesión segura
 // =====================================================
 
 const API = {
 
   async _get(path, params = {}) {
     const url = new URL(CONFIG.API_URL + path, location.origin);
-    Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-    const res = await fetch(url.toString());
+
+    Object.entries(params).forEach(([k, v]) => {
+      url.searchParams.set(k, v);
+    });
+
+    const res = await fetch(url.toString(), {
+      method: 'GET',
+      credentials: 'same-origin'
+    });
+
     return res.json();
   },
 
   async _post(path, data = {}) {
     const res = await fetch(CONFIG.API_URL + path, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key: CONFIG.ADMIN_KEY, ...data }),
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
     });
+
     return res.json();
   },
 
   async _put(path, data = {}) {
     const res = await fetch(CONFIG.API_URL + path, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key: CONFIG.ADMIN_KEY, ...data }),
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
     });
+
     return res.json();
   },
 
   async _delete(path, data = {}) {
     const res = await fetch(CONFIG.API_URL + path, {
       method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key: CONFIG.ADMIN_KEY, ...data }),
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
     });
+
     return res.json();
   },
 
-  // ── Productos (público) ───────────────────────────────
+  // -----------------------------------------------
+  // AUTENTICACIÓN
+  // -----------------------------------------------
+
+  async login(key) {
+    return this._post('/auth', { key });
+  },
+
+  async checkAuth() {
+    return this._get('/auth');
+  },
+
+  async logout() {
+    return this._delete('/auth');
+  },
+
+  // -----------------------------------------------
+  // PRODUCTOS
+  // -----------------------------------------------
+
   async getProducts() {
     return this._get('/products');
   },
 
-  // ── Productos (admin, incluye inactivos) ──────────────
   async getProductsAdmin() {
-    return this._get('/products', { admin: '1', key: CONFIG.ADMIN_KEY });
+    return this._get('/products', { admin: '1' });
   },
 
-  // ── Config ────────────────────────────────────────────
-  async getConfig() {
-    return this._get('/config');
-  },
-
-  // ── Mutaciones (requieren ADMIN_KEY) ──────────────────
   async addProduct(product) {
     return this._post('/products', { product });
   },
@@ -70,7 +104,16 @@ const API = {
     return this._post(`/products/${id}/reactivate`);
   },
 
+  // -----------------------------------------------
+  // CONFIGURACIÓN DE LA TIENDA
+  // -----------------------------------------------
+
+  async getConfig() {
+    return this._get('/config');
+  },
+
   async updateConfig(config) {
     return this._put('/config', config);
-  },
+  }
+
 };
