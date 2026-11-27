@@ -1,44 +1,84 @@
-// =====================================================
-//  ADMIN PANEL
-// =====================================================
 
+// ADMIN PANEL
 let adminProducts = [];
 let adminFilter = { search: '', showInactive: false };
 let editingId = null;
 let imageUrls = [];
 
-// ── Auth ──────────────────────────────────────────────
-function checkAuth() {
-  const saved = sessionStorage.getItem('admin_auth');
-  if (saved === CONFIG.ADMIN_KEY) {
-    showPanel();
-  } else {
-    document.getElementById('auth-screen').style.display = 'flex';
-    document.getElementById('admin-panel').style.display = 'none';
+// =====================================================
+// AUTENTICACIÓN MEDIANTE SESIÓN SEGURA
+// =====================================================
+
+async function checkAuth() {
+  const authScreen = document.getElementById('auth-screen');
+  const adminPanel = document.getElementById('admin-panel');
+
+  try {
+    const result = await API.checkAuth();
+
+    if (result.authenticated) {
+      showPanel();
+    } else {
+      authScreen.style.display = 'flex';
+      adminPanel.style.display = 'none';
+    }
+  } catch (err) {
+    authScreen.style.display = 'flex';
+    adminPanel.style.display = 'none';
+    showAuthError('No se pudo verificar la sesión. Intenta nuevamente.');
   }
 }
 
-function login() {
-  const key = document.getElementById('admin-password').value.trim();
-  if (key === CONFIG.ADMIN_KEY) {
-    sessionStorage.setItem('admin_auth', key);
-    showPanel();
-  } else {
-    document.getElementById('auth-error').textContent = 'Clave incorrecta';
-    document.getElementById('admin-password').classList.add('shake');
-    setTimeout(() => document.getElementById('admin-password').classList.remove('shake'), 400);
+async function login() {
+  const input = document.getElementById('admin-password');
+  const error = document.getElementById('auth-error');
+  const key = input.value.trim();
+
+  if (!key) {
+    showAuthError('Introduce tu clave de administrador.');
+    return;
+  }
+
+  try {
+    const result = await API.login(key);
+
+    if (result.ok && result.authenticated) {
+      input.value = '';
+      error.textContent = '';
+      showPanel();
+    } else {
+      showAuthError(result.error || 'Clave incorrecta.');
+    }
+  } catch (err) {
+    showAuthError('Error de conexión. Intenta nuevamente.');
   }
 }
 
-function logout() {
-  sessionStorage.removeItem('admin_auth');
+async function logout() {
+  try {
+    await API.logout();
+  } catch (err) {
+    console.error('Error cerrando sesión:', err);
+  }
+
   location.reload();
 }
 
 function showPanel() {
   document.getElementById('auth-screen').style.display = 'none';
-  document.getElementById('admin-panel').style.display = 'flex';
+  document.getElementById('admin-panel').style.display = 'block';
   loadAdmin();
+}
+
+function showAuthError(message) {
+  const error = document.getElementById('auth-error');
+
+  error.textContent = message;
+  error.classList.add('shake');
+
+  setTimeout(() => {
+    error.classList.remove('shake');
+  }, 400);
 }
 
 // ── Load ──────────────────────────────────────────────
